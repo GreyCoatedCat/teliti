@@ -1,0 +1,36 @@
+# TELITI — one container, one port.
+#
+#   docker compose up --build
+#   open http://localhost:8000
+#
+# The frontend is built into the image and served by FastAPI, so there is no CORS
+# and no reverse proxy to configure. That is what makes a demo survive an
+# unfamiliar network.
+
+services:
+  teliti:
+    build: .
+    image: teliti:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Where the built React bundle lives inside the image.
+      TELITI_STATIC_DIR: /app/web_dist
+    volumes:
+      # Locale resources. Mounted so a lexicon or UMK table can be corrected
+      # without rebuilding: edit the file and restart (see docs/LOCALES.md).
+      - ./data/reference:/app/data/reference:ro
+
+      # NOTE: artifacts/ is deliberately NOT mounted.
+      #
+      # It used to be, back when the image did not contain the weights. The
+      # Dockerfile now bakes them in, and mounting over /app/artifacts would
+      # shadow that copy with whatever happens to be on the host — on a fresh
+      # clone, an almost-empty directory. The container would start, serve the
+      # UI, report model_loaded=false and return 503 from every analysis, with
+      # the weights sitting unreachable inside the image the whole time.
+      #
+      # To serve a retrained model without rebuilding, point it at the Hub
+      # instead:  TELITI_MODEL_REPO=<user>/<repo>
+
+    restart: unless-stopped
